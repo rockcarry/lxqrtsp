@@ -149,7 +149,7 @@ int main(void)
             printf("type: %s, url: %s, version: %s, cseq: %d\n", request_type, request_url, request_ver, cseq); fflush(stdout);
             if (strcmp(request_type, "OPTIONS") == 0) {
                 length = snprintf(sendbuf, sizeof(sendbuf), "RTSP/1.0 200 OK\r\nCSeq: %d\r\nPublic: OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY\r\n\r\n", cseq);
-                length = send(conn_fd, sendbuf, length, 0);
+                send(conn_fd, sendbuf, length, 0);
             } else if (strcmp(request_type, "DESCRIBE") == 0) {
                 datalen = gen_sdp_str(sendbuf, sizeof(sendbuf), "-", sessionid, localip,
                             channels, samprate, aaccfg, framerate, spsdata, sizeof(spsdata), ppsdata, sizeof(ppsdata));
@@ -159,6 +159,27 @@ int main(void)
                 printf("response:\n%s\n", sendbuf + datalen); fflush(stdout);
                 send(conn_fd, sendbuf + datalen, length, 0);
                 send(conn_fd, sendbuf, datalen, 0);
+            } else if (strcmp(request_type, "SETUP") == 0) {
+                length = snprintf(sendbuf, sizeof(sendbuf),
+                    "RTSP/1.0 200 OK\r\n"
+                    "CSeq: %d\r\n"
+                    "Transport: RTP/AVP/TCP;unicast;interleaved=0-1\r\n"
+                    "Session: %d\r\n\r\n", cseq, sessionid);
+                send(conn_fd, sendbuf, length, 0);
+            } else if (strcmp(request_type, "PLAY") == 0) {
+                length = snprintf(sendbuf, sizeof(sendbuf),
+                    "RTSP/1.0 200 OK\r\n"
+                    "CSeq: %d\r\n"
+                    "Range: npt=0.000-\r\n"
+                    "Session: %d\r\n\r\n", cseq, sessionid);
+                send(conn_fd, sendbuf, length, 0);
+            } else if (strcmp(request_type, "TEARDOWN") == 0) {
+                length = snprintf(sendbuf, sizeof(sendbuf),
+                    "RTSP/1.0 200 OK\r\n"
+                    "CSeq: %d\r\n"
+                    "Connection: Close\r\n"
+                    "Session: %d\r\n\r\n", cseq, sessionid);
+                send(conn_fd, sendbuf, length, 0);
             }
         }
 _next:
